@@ -3,21 +3,28 @@ import { Sparkles, Eye, Scissors, KeyRound, CheckCircle2, X } from 'lucide-react
 import EpisodeFactoryTab from './components/EpisodeFactoryTab.jsx';
 import VisionDoctorTab from './components/VisionDoctorTab.jsx';
 import AudioTrimmerTab from './components/AudioTrimmerTab.jsx';
+import { AVAILABLE_MODELS } from './utils/gemini.js';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('factory');
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
+  const [selectedModel, setSelectedModel] = useState(
+    () => localStorage.getItem('gemini_model') || 'auto'
+  );
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [tempKey, setTempKey] = useState(apiKey);
+  const [tempModel, setTempModel] = useState(selectedModel);
 
   useEffect(() => {
     if (!apiKey) setShowKeyModal(true);
   }, []);
 
-  const saveApiKey = () => {
+  const saveSettings = () => {
     const cleaned = tempKey.trim();
     localStorage.setItem('gemini_api_key', cleaned);
+    localStorage.setItem('gemini_model', tempModel);
     setApiKey(cleaned);
+    setSelectedModel(tempModel);
     setShowKeyModal(false);
   };
 
@@ -29,11 +36,14 @@ export default function App() {
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <h1 className="font-bold text-base tracking-tight text-white">Siapa Tahu Director</h1>
           </div>
-          <p className="text-[11px] text-slate-400">Gemini 3.8 Flash • Multimodal Studio</p>
+          <p className="text-[11px] text-slate-400">
+            {selectedModel === 'auto' ? 'Auto Fallback' : selectedModel} • Multimodal Studio
+          </p>
         </div>
         <button
           onClick={() => {
             setTempKey(apiKey);
+            setTempModel(selectedModel);
             setShowKeyModal(true);
           }}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${
@@ -53,6 +63,7 @@ export default function App() {
             apiKey={apiKey}
             onOpenKeyModal={() => {
               setTempKey(apiKey);
+              setTempModel(selectedModel);
               setShowKeyModal(true);
             }}
           />
@@ -62,6 +73,7 @@ export default function App() {
             apiKey={apiKey}
             onOpenKeyModal={() => {
               setTempKey(apiKey);
+              setTempModel(selectedModel);
               setShowKeyModal(true);
             }}
           />
@@ -96,29 +108,50 @@ export default function App() {
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-white text-sm">Konfigurasi Gemini API Key</h3>
+              <h3 className="font-semibold text-white text-sm">Konfigurasi Gemini API</h3>
               {apiKey && (
                 <button onClick={() => setShowKeyModal(false)} className="text-slate-400 hover:text-white">
                   <X className="w-4 h-4" />
                 </button>
               )}
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Disimpan secara lokal di perangkat (<code>localStorage</code>) untuk memanggil <code>gemini-3.8-flash</code> langsung dari aplikasi.
-            </p>
-            <input
-              type="password"
-              value={tempKey}
-              onChange={(e) => setTempKey(e.target.value)}
-              placeholder="AIzaSy..."
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-emerald-500"
-            />
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-slate-400 uppercase">
+                Gemini API Key
+              </label>
+              <input
+                type="password"
+                value={tempKey}
+                onChange={(e) => setTempKey(e.target.value)}
+                placeholder="AIzaSy..."
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-slate-400 uppercase">
+                Prioritas Model (Anti-Quota Block)
+              </label>
+              <select
+                value={tempModel}
+                onChange={(e) => setTempModel(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-emerald-500"
+              >
+                {AVAILABLE_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button
-              onClick={saveApiKey}
+              onClick={saveSettings}
               className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm flex items-center justify-center gap-2 transition"
             >
               <CheckCircle2 className="w-4 h-4" />
-              Simpan API Key
+              Simpan Pengaturan
             </button>
           </div>
         </div>

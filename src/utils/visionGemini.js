@@ -1,6 +1,5 @@
 import { saveAnalyticsEntry, setHookCalibration } from './db.js';
-
-const MODEL_NAME = 'gemini-3.8-flash';
+import { getModelsQueue } from './gemini.js';
 
 function fileToInlineData(file) {
   return new Promise((resolve, reject) => {
@@ -40,6 +39,57 @@ function fileToInlineData(file) {
     reader.onerror = () => reject(new Error('Gagal membaca file gambar.'));
     reader.readAsDataURL(file);
   });
+}
+
+async function generateVisionJsonWithFallback(apiKey, prompt, inlineData, schema) {
+  const models = getModelsQueue();
+  let lastError = null;
+
+  for (const model of models) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: 'user',
+                parts: [{ text: prompt }, { inlineData }]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.3,
+              responseMimeType: 'application/json',
+              responseSchema: schema
+            }
+          })
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) {
+        const err = new Error(data?.error?.message || `HTTP ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
+
+      const rawText = data?.candidates?.[0]?.content?.parts
+        ?.map((p) => p.text || '')
+        .join('')
+        .trim();
+
+      return JSON.parse(rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim());
+    } catch (err) {
+      lastError = err;
+      if (err.status === 401 || err.status === 403) {
+        throw new Error('API Key tidak valid atau ditolak.');
+      }
+    }
+  }
+
+  throw new Error(lastError?.message || 'Semua model Vision mencapai batas kuota.');
 }
 
 const VISUAL_QC_SCHEMA = {
@@ -99,32 +149,7 @@ Audit gambar frame 00:00 / Master Image ini secara ketat:
 4. verdict_summary: Ringkasan evaluasi QC 1-2 kalimat tajam dalam Bahasa Indonesia.
 5. fix_prompt: Jika scroll_stop_score < 8 (atau ada cacat mata/mulut), tulis prompt perbaikan Bahasa Inggris lengkap siap copy untuk Google Flow (perbaiki posisi 2 mata kartun simetris, kunci kamera front-facing, sertakan "no cartoon mouth, no teeth, natural beak only" jika relevan, dan tingkatkan kontras makro). Jika skor >= 8, tulis prompt penyempurnaan opsional singkat.`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${encodeURIComponent(apiKey)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }, { inlineData }]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.3,
-          responseMimeType: 'application/json',
-          responseSchema: VISUAL_QC_SCHEMA
-        }
-      })
-    }
-  );
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status} dari Gemini Vision`);
-
-  const rawText = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('').trim();
-  const parsed = JSON.parse(rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim());
+  const parsed = await generateVisionJsonWithFallback(apiKey, prompt, inlineData, VISUAL_QC_SCHEMA);
   return { ...parsed, previewUrl };
 }
 
@@ -143,32 +168,12 @@ Baca screenshot halaman Analytics YT Studio ini dan ekstrak datanya ke JSON:
 5. sharp_diagnosis: 1 diagnosa tajam dan spesifik (maksimal 2 kalimat Bahasa Indonesia) tentang di mana penonton kabur (detik 0-3 hook atau drop di tengah).
 6. next_hook_directive: 1 instruksi teknis konkret (Bahasa Indonesia, 1 kalimat tegas) yang akan otomatis disuntikkan ke generator naskah episode berikutnya untuk memperbaiki metrik ini (contoh: "Buka detik 00:00 dengan pertanyaan kontras anatomi ekstrem dalam 5 kata pertama dan gerakan zoom-in mata kartun kaget").`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${encodeURIComponent(apiKey)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }, { inlineData }]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.3,
-          responseMimeType: 'application/json',
-          responseSchema: ANALYTICS_DOCTOR_SCHEMA
-        }
-      })
-    }
+  const parsed = await generateVisionJsonWithFallback(
+    apiKey,
+    prompt,
+    inlineData,
+    ANALYTICS_DOCTOR_SCHEMA
   );
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status} dari Gemini Vision`);
-
-  const rawText = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('').trim();
-  const parsed = JSON.parse(rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim());
 
   await saveAnalyticsEntry({
     video_topic: parsed.video_topic,

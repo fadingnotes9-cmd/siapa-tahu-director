@@ -1,7 +1,26 @@
 import { applyAntiDriftLock } from './antiDrift.js';
 import { getHookCalibration } from './db.js';
 
-const MODEL_NAME = 'gemini-3.8-flash';
+export const AVAILABLE_MODELS = [
+  { id: 'auto', label: 'Auto (Smart Fallback)' },
+  { id: 'gemini-3.8-flash', label: 'gemini-3.8-flash' },
+  { id: 'gemini-3-flash-preview', label: 'gemini-3-flash-preview' },
+  { id: 'gemini-3.8-flash-lite', label: 'gemini-3.8-flash-lite (Hemat Kuota)' },
+  { id: 'gemini-2.5-flash-lite', label: 'gemini-2.5-flash-lite (Free Tier)' }
+];
+
+export const FALLBACK_MODELS = [
+  'gemini-3.8-flash',
+  'gemini-3-flash-preview',
+  'gemini-3.8-flash-lite',
+  'gemini-2.5-flash-lite'
+];
+
+export function getModelsQueue() {
+  const preferred = localStorage.getItem('gemini_model') || 'auto';
+  if (preferred === 'auto') return [...FALLBACK_MODELS];
+  return [preferred, ...FALLBACK_MODELS.filter((m) => m !== preferred)];
+}
 
 const EPISODE_SCHEMA = {
   type: 'OBJECT',
@@ -82,6 +101,37 @@ const EPISODE_SCHEMA = {
   ]
 };
 
+async function callGeminiEpisodeEndpoint(apiKey, model, prompt, useSearch) {
+  const payload = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.7,
+      responseMimeType: 'application/json',
+      responseSchema: EPISODE_SCHEMA
+    }
+  };
+  if (useSearch) {
+    payload.tools = [{ googleSearch: {} }];
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data?.error?.message || `HTTP ${response.status}`);
+    err.status = response.status;
+    throw err;
+  }
+  return data;
+}
+
 export async function generateEpisodeFactory(apiKey, animalName) {
   if (!apiKey) throw new Error('API Key Gemini belum diisi.');
   const cleanAnimal = animalName.trim();
@@ -95,7 +145,7 @@ export async function generateEpisodeFactory(apiKey, animalName) {
   const prompt = `Kamu adalah Creative Director untuk channel edukasi hewan vertikal "Siapa Tahu" (gaya visual: hewan fotorealistis makro dengan mata kartun 3D googly eyes yang ekspresif, narasi POV/edukasi witty Bahasa Indonesia).
 
 TUGAS UTAMA:
-Gunakan Google Search Grounding untuk memverifikasi fakta anatomi dan perilaku nyata dari hewan: "${cleanAnimal}".
+Verifikasi fakta anatomi dan perilaku nyata dari hewan: "${cleanAnimal}".
 
 ATURAN KETAT OUTPUT JSON:
 1. has_beak_or_sharp_snout: Set true jika hewan memiliki paruh, moncong panjang/tajam, atau struktur mulut memanjang (misal burung, platipus, bunglon, buaya, trenggiling, kura-kura, hiu).
@@ -112,42 +162,59 @@ ATURAN KETAT OUTPUT JSON:
 8. seo_tags: Tepat 6 tag SEO relevan tanpa tanda #.
 9. social_captions: Caption dan Pinned Comment pemancing diskusi untuk yt_shorts, tiktok, ig_reels, dan fb_reels.`;
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${encodeURIComponent(apiKey)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        tools: [{ googleSearch: {} }],
-        generationConfig: {
-          temperature: 0.7,
-          responseMimeType: 'application/json',
-          responseSchema: EPISODE_SCHEMA
-        }
-      })
-    }
-  );
+  const models = getModelsQueue();
+  let lastError = null;
+  let successData = null;
+  let usedModel = '';
+  let usedSearch = false;
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data?.error?.message || `HTTP ${response.status} dari Gemini API`);
+  for (const model of models) {
+    // Attempt 1: With Google Search Grounding
+    try {
+      successData = await callGeminiEpisodeEndpoint(apiKey, model, prompt, true);
+      usedModel = model;
+      usedSearch = true;
+      break;
+    } catch (err) {
+      lastError = err;
+      if (err.status === 401 || err.status === 403) {
+        throw new Error('API Key tidak valid atau ditolak. Cek kembali key di pojok kanan atas.');
+      }
+      // Attempt 2: Same model without Search Grounding (in case Search quota is 0 on Free Tier)
+      if (err.status === 429 || err.status === 400) {
+        try {
+          successData = await callGeminiEpisodeEndpoint(apiKey, model, prompt, false);
+          usedModel = model;
+          usedSearch = false;
+          break;
+        } catch (errNoSearch) {
+          lastError = errNoSearch;
+          continue; // Move to next model in fallback chain
+        }
+      }
+    }
   }
 
-  const rawText = data?.candidates?.[0]?.content?.parts
+  if (!successData) {
+    throw new Error(
+      `Semua model mencapai batas kuota Free Tier (${lastError?.message || '429'}). Tunggu reset menit berikutnya atau cek AI Studio.`
+    );
+  }
+
+  const rawText = successData?.candidates?.[0]?.content?.parts
     ?.map((p) => p.text || '')
     .join('')
     .trim();
 
   if (!rawText) {
-    throw new Error('Respons kosong dari Gemini 2.5 Flash.');
+    throw new Error('Respons kosong dari Gemini API.');
   }
 
   const cleanedJson = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
   const parsed = JSON.parse(cleanedJson);
 
   const groundingChunks =
-    data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    successData?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
   const sources = groundingChunks
     .map((c) => c.web)
     .filter(Boolean)
@@ -157,6 +224,8 @@ ATURAN KETAT OUTPUT JSON:
   return {
     ...lockedResult,
     grounding_sources: sources,
-    calibrated_hook_used: calibratedHook?.directive || null
+    calibrated_hook_used: calibratedHook?.directive || null,
+    model_used: usedModel,
+    search_grounded_used: usedSearch
   };
 }
