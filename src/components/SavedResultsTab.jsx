@@ -48,12 +48,14 @@ export default function SavedResultsTab({ refreshSignal, onCountChange }) {
     setTimeout(() => setExportStatus(''), 3000);
   };
 
+  const getEpisodeTitle = (ep) => ep?.metadata?.yt_title_main || ep?.title || '';
+
   const filtered = episodes.filter((ep) => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
     return (
       (ep.animal_name || '').toLowerCase().includes(q) ||
-      (ep.title || '').toLowerCase().includes(q)
+      getEpisodeTitle(ep).toLowerCase().includes(q)
     );
   });
 
@@ -80,7 +82,7 @@ export default function SavedResultsTab({ refreshSignal, onCountChange }) {
               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
             >
               <FileDown className="w-3.5 h-3.5 text-emerald-400" />
-              Export TXT
+              Download .TXT
             </button>
             <button
               type="button"
@@ -105,7 +107,7 @@ export default function SavedResultsTab({ refreshSignal, onCountChange }) {
             Arsip Produksi • {new Date(selectedEpisode.savedAt).toLocaleString('id-ID')}
           </span>
           <h2 className="text-base font-extrabold text-white capitalize mt-0.5">
-            {selectedEpisode.animal_name} — {selectedEpisode.title}
+            {selectedEpisode.animal_name} — {getEpisodeTitle(selectedEpisode)}
           </h2>
         </div>
 
@@ -116,7 +118,6 @@ export default function SavedResultsTab({ refreshSignal, onCountChange }) {
 
   return (
     <div className="space-y-4">
-      {/* Header Folder Konten */}
       <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -155,7 +156,6 @@ export default function SavedResultsTab({ refreshSignal, onCountChange }) {
         )}
       </div>
 
-      {/* List Saved Episodes */}
       {filtered.length === 0 ? (
         <div className="p-8 rounded-2xl bg-slate-900/50 border border-dashed border-slate-800 text-center space-y-2">
           <FolderOpen className="w-8 h-8 text-slate-600 mx-auto" />
@@ -166,14 +166,18 @@ export default function SavedResultsTab({ refreshSignal, onCountChange }) {
           </p>
           <p className="text-[11px] text-slate-500">
             {episodes.length === 0
-              ? 'Generate episode di Tab Factory lalu tekan "Simpan ke Folder Konten".'
+              ? 'Generate episode di Tab Factory lalu tekan "Simpan ke Hasil".'
               : 'Coba kata kunci hewan lain.'}
           </p>
         </div>
       ) : (
         <div className="space-y-2.5">
           {filtered.map((ep) => {
-            const words = (ep.vo_script || '').trim().split(/\s+/).filter(Boolean).length;
+            const voText = ep.full_vo_script || ep.vo_script || '';
+            const words =
+              ep.vo_word_count ??
+              (voText ? voText.trim().split(/\s+/).filter(Boolean).length : 0);
+            const titleText = getEpisodeTitle(ep);
             return (
               <div
                 key={ep.id}
@@ -191,7 +195,7 @@ export default function SavedResultsTab({ refreshSignal, onCountChange }) {
                       </span>
                     </div>
                     <p className="text-xs font-semibold text-white mt-1 line-clamp-1">
-                      {ep.title}
+                      {titleText}
                     </p>
                   </div>
 
@@ -200,7 +204,7 @@ export default function SavedResultsTab({ refreshSignal, onCountChange }) {
                       type="button"
                       onClick={(e) => handleExportTxt(e, ep)}
                       className="p-2 rounded-lg bg-slate-950 hover:bg-slate-800 text-emerald-400 border border-slate-800"
-                      title="Export ke TXT"
+                      title="Download .TXT"
                     >
                       <FileDown className="w-3.5 h-3.5" />
                     </button>
