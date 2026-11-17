@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Siapa Tahu Director</string>
+    <string name="title_activity_main">Siapa Tahu Director</string>
+    <string name="package_name">com.siapatahu.director</string>
+    <string name="custom_url_scheme">com.siapatahu.director</string>
+</resources>

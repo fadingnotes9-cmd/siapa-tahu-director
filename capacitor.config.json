@@ -1,0 +1,8 @@
+{
+  "appId": "com.siapatahu.director",
+  "appName": "Siapa Tahu Director",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
