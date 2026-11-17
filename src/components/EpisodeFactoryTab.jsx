@@ -15,6 +15,8 @@ import EpisodeDetailView from './EpisodeDetailView.jsx';
 
 export default function EpisodeFactoryTab({
   apiKey,
+  deepseekKey,
+  factoryProvider,
   onOpenKeyModal,
   isActive,
   onEpisodeSaved
@@ -43,7 +45,7 @@ export default function EpisodeFactoryTab({
 
   const handleGenerate = async (e) => {
     e.preventDefault();
-    if (!apiKey) {
+    if (!apiKey && !deepseekKey) {
       onOpenKeyModal();
       return;
     }
@@ -55,7 +57,10 @@ export default function EpisodeFactoryTab({
     setIsSavedCurrent(false);
 
     try {
-      const data = await generateEpisodeFactory(apiKey, animal);
+      const data = await generateEpisodeFactory(
+        { geminiKey: apiKey, deepseekKey, provider: factoryProvider },
+        animal
+      );
       setResult(data);
       localStorage.setItem('last_factory_animal', animal.trim());
       localStorage.setItem('last_factory_result', JSON.stringify(data));
@@ -98,6 +103,11 @@ export default function EpisodeFactoryTab({
     localStorage.removeItem('last_factory_result');
   };
 
+  const engineBadge =
+    factoryProvider === 'deepseek' || (factoryProvider === 'auto' && deepseekKey)
+      ? 'DeepSeek-Chat + JSON'
+      : 'Gemini + JSON';
+
   return (
     <div className="space-y-4">
       {activeCalibration?.directive && (
@@ -130,7 +140,7 @@ export default function EpisodeFactoryTab({
               <RotateCcw className="w-3 h-3" /> Reset
             </button>
           ) : (
-            <span className="text-[11px] text-slate-400">Search Grounded + JSON</span>
+            <span className="text-[11px] text-slate-400">{engineBadge}</span>
           )}
         </div>
 
