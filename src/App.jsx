@@ -29,7 +29,7 @@ export default function App() {
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <h1 className="font-bold text-base tracking-tight text-white">Siapa Tahu Director</h1>
           </div>
-          <p className="text-[11px] text-slate-400">Gemini 2.5 Flash • Multimodal Studio</p>
+          <p className="text-[11px] text-slate-400">Gemini 3.8 Flash • Multimodal Studio</p>
         </div>
         <button
           onClick={() => {
@@ -104,7 +104,7 @@ export default function App() {
               )}
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Disimpan secara lokal di perangkat (<code>localStorage</code>) untuk memanggil <code>gemini-2.5-flash</code> langsung dari aplikasi.
+              Disimpan secara lokal di perangkat (<code>localStorage</code>) untuk memanggil <code>gemini-3.8-flash</code> langsung dari aplikasi.
             </p>
             <input
               type="password"

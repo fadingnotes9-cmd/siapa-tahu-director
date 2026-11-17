@@ -1,7 +1,7 @@
 import { applyAntiDriftLock } from './antiDrift.js';
 import { getHookCalibration } from './db.js';
 
-const MODEL_NAME = 'gemini-2.5-flash';
+const MODEL_NAME = 'gemini-3.8-flash';
 
 const EPISODE_SCHEMA = {
   type: 'OBJECT',

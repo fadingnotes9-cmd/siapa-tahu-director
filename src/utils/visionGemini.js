@@ -1,6 +1,6 @@
 import { saveAnalyticsEntry, setHookCalibration } from './db.js';
 
-const MODEL_NAME = 'gemini-2.5-flash';
+const MODEL_NAME = 'gemini-3.8-flash';
 
 function fileToInlineData(file) {
   return new Promise((resolve, reject) => {
