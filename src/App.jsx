@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Eye, Scissors, KeyRound, CheckCircle2, X } from 'lucide-react';
+import {
+  Sparkles,
+  FolderOpen,
+  Eye,
+  Scissors,
+  KeyRound,
+  CheckCircle2,
+  X
+} from 'lucide-react';
 import EpisodeFactoryTab from './components/EpisodeFactoryTab.jsx';
+import SavedResultsTab from './components/SavedResultsTab.jsx';
 import VisionDoctorTab from './components/VisionDoctorTab.jsx';
 import AudioTrimmerTab from './components/AudioTrimmerTab.jsx';
 import { AVAILABLE_MODELS } from './utils/gemini.js';
+import { getSavedEpisodes } from './utils/db.js';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('factory');
@@ -14,9 +24,12 @@ export default function App() {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [tempKey, setTempKey] = useState(apiKey);
   const [tempModel, setTempModel] = useState(selectedModel);
+  const [savedCount, setSavedCount] = useState(0);
+  const [savedRefreshSignal, setSavedRefreshSignal] = useState(0);
 
   useEffect(() => {
     if (!apiKey) setShowKeyModal(true);
+    getSavedEpisodes().then((list) => setSavedCount(list.length));
   }, []);
 
   const saveSettings = () => {
@@ -26,6 +39,12 @@ export default function App() {
     setApiKey(cleaned);
     setSelectedModel(tempModel);
     setShowKeyModal(false);
+  };
+
+  const openKeyModal = () => {
+    setTempKey(apiKey);
+    setTempModel(selectedModel);
+    setShowKeyModal(true);
   };
 
   return (
@@ -41,11 +60,7 @@ export default function App() {
           </p>
         </div>
         <button
-          onClick={() => {
-            setTempKey(apiKey);
-            setTempModel(selectedModel);
-            setShowKeyModal(true);
-          }}
+          onClick={openKeyModal}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${
             apiKey
               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
@@ -58,32 +73,35 @@ export default function App() {
       </header>
 
       <main className="flex-1 p-4 pb-24 overflow-y-auto">
-        {activeTab === 'factory' && (
+        <div className={activeTab === 'factory' ? 'block' : 'hidden'}>
           <EpisodeFactoryTab
             apiKey={apiKey}
-            onOpenKeyModal={() => {
-              setTempKey(apiKey);
-              setTempModel(selectedModel);
-              setShowKeyModal(true);
-            }}
+            onOpenKeyModal={openKeyModal}
+            isActive={activeTab === 'factory'}
+            onEpisodeSaved={() => setSavedRefreshSignal((n) => n + 1)}
           />
-        )}
-        {activeTab === 'qc' && (
+        </div>
+        <div className={activeTab === 'results' ? 'block' : 'hidden'}>
+          <SavedResultsTab
+            refreshSignal={savedRefreshSignal}
+            onCountChange={setSavedCount}
+          />
+        </div>
+        <div className={activeTab === 'qc' ? 'block' : 'hidden'}>
           <VisionDoctorTab
             apiKey={apiKey}
-            onOpenKeyModal={() => {
-              setTempKey(apiKey);
-              setTempModel(selectedModel);
-              setShowKeyModal(true);
-            }}
+            onOpenKeyModal={openKeyModal}
           />
-        )}
-        {activeTab === 'audio' && <AudioTrimmerTab />}
+        </div>
+        <div className={activeTab === 'audio' ? 'block' : 'hidden'}>
+          <AudioTrimmerTab />
+        </div>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/95 backdrop-blur-md border-t border-slate-800 grid grid-cols-3 py-2 px-2 z-30">
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/95 backdrop-blur-md border-t border-slate-800 grid grid-cols-4 py-2 px-1.5 z-30">
         {[
           { id: 'factory', label: 'Factory', icon: Sparkles },
+          { id: 'results', label: 'Hasil', icon: FolderOpen, badge: savedCount },
           { id: 'qc', label: 'QC & Doctor', icon: Eye },
           { id: 'audio', label: 'Loop Audio', icon: Scissors }
         ].map((tab) => {
@@ -93,11 +111,18 @@ export default function App() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition ${
+              className={`relative flex flex-col items-center justify-center py-1.5 rounded-xl transition ${
                 active ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Icon className="w-5 h-5 mb-0.5" />
+              <div className="relative">
+                <Icon className="w-5 h-5 mb-0.5" />
+                {tab.badge > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-emerald-500 text-slate-950 text-[9px] font-black flex items-center justify-center">
+                    {tab.badge}
+                  </span>
+                )}
+              </div>
               <span className="text-[11px] font-medium">{tab.label}</span>
             </button>
           );

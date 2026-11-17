@@ -1,5 +1,5 @@
 const DB_NAME = 'siapa_tahu_director_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -11,6 +11,9 @@ function openDB() {
       }
       if (!db.objectStoreNames.contains('settings')) {
         db.createObjectStore('settings', { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains('saved_episodes')) {
+        db.createObjectStore('saved_episodes', { keyPath: 'id', autoIncrement: true });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -71,4 +74,42 @@ export async function getAnalyticsHistory() {
   } catch {
     return [];
   }
+}
+
+export async function saveEpisodeToFolder(episodeData) {
+  const db = await openDB();
+  const record = {
+    ...episodeData,
+    savedAt: new Date().toISOString()
+  };
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('saved_episodes', 'readwrite');
+    const req = tx.objectStore('saved_episodes').add(record);
+    req.onsuccess = () => resolve({ ...record, id: req.result });
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+export async function getSavedEpisodes() {
+  try {
+    const db = await openDB();
+    return await new Promise((resolve) => {
+      const tx = db.transaction('saved_episodes', 'readonly');
+      const req = tx.objectStore('saved_episodes').getAll();
+      req.onsuccess = () => resolve((req.result || []).reverse());
+      req.onerror = () => resolve([]);
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteSavedEpisode(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('saved_episodes', 'readwrite');
+    tx.objectStore('saved_episodes').delete(id);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
 }
