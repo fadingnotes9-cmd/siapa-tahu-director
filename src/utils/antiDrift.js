@@ -1,58 +1,93 @@
-const BEAK_OR_SNOUT_REGEX =
-  /(paruh|burung|elang|pelatuk|bebek|angsa|penguin|platipus|buaya|trenggiling|bunglon|tokek|kura-kura|penyu|hiu|lumba|pelikan|bangau|flamingo|gagak|hantu|merpati|ayam|kolibri|rangkong|beak|bill|snout|bird|chameleon|platypus|crocodile|alligator|duck|eagle|owl|woodpecker|toucan|parrot|penguin|turtle|tortoise|shark|dolphin|anteater|pelican|heron|hummingbird|hornbill)/i;
+const BEAKED_ANIMAL_REGEX =
+  /(paruh|burung|elang|pelatuk|bebek|angsa|penguin|platipus|penyu|kura-kura|pelikan|bangau|flamingo|gagak|hantu|merpati|ayam|kalkun|kasuari|unta|kolibri|rangkong|kakatua|camar|cekakak|rajawali|alap-alap|beak|bird|duck|eagle|owl|woodpecker|toucan|parrot|penguin|turtle|tortoise|platypus|pelican|heron|hummingbird|hornbill|cockatoo|macaw|seagull|ostrich|kiwi|puffin|kingfisher|falcon)/i;
+
+const NON_BEAKED_OVERRIDE_REGEX =
+  /(bunglon|buaya|tokek|ular|komodo|kadal|iguana|biawak|katak|kodok|salamander|axolotl|hiu|paus|lumba|ikan|gurita|ubur|cumi|kepiting|udang|lobster|laba-laba|semut|lebah|kumbang|belalang|capung|kupu|kalajengking|kucing|anjing|monyet|gorila|orangutan|harimau|singa|beruang|gajah|jerapah|kuda|sapi|kambing|domba|kelinci|tikus|tupai|kelelawar|landak|trenggiling|chameleon|crocodile|alligator|gecko|snake|lizard|frog|toad|shark|whale|dolphin|fish|octopus|squid|crab|spider|ant|bee|beetle|mantis|scorpion|cat|dog|monkey|tiger|lion|bear|elephant|rabbit|bat|hedgehog|pangolin)/i;
 
 export function applyAntiDriftLock(rawPayload, animalInput) {
-  const cleanPhysicalDesc = (rawPayload.step0_physical_desc || '')
+  const cleanAnatomy = (rawPayload.step0_physical_desc || '')
     .replace(/\s+/g, ' ')
+    .replace(/\.+$/, '')
     .trim();
 
-  const isBeakOrSharpSnout =
-    Boolean(rawPayload.has_beak_or_sharp_snout) ||
-    BEAK_OR_SNOUT_REGEX.test(animalInput) ||
-    BEAK_OR_SNOUT_REGEX.test(cleanPhysicalDesc);
+  const isNonBeakedExplicit =
+    NON_BEAKED_OVERRIDE_REGEX.test(animalInput) ||
+    NON_BEAKED_OVERRIDE_REGEX.test(cleanAnatomy);
 
-  const negativeConstraint = isBeakOrSharpSnout
-    ? 'no cartoon mouth, no teeth, natural beak only'
-    : 'no extra mouths, symmetrical cartoon eyes, clean anatomy';
+  const isBeaked =
+    !isNonBeakedExplicit &&
+    (Boolean(rawPayload.is_beaked_animal) ||
+      BEAKED_ANIMAL_REGEX.test(animalInput) ||
+      BEAKED_ANIMAL_REGEX.test(cleanAnatomy));
 
-  const cameraLock = isBeakOrSharpSnout
-    ? 'front-facing'
-    : 'eye-level macro framing';
+  const cartoonFeatures =
+    'two symmetrical large white round cartoon googly eyes (black pupils) and thick expressive black cartoon eyebrows';
 
-  // Step 0 Master Image embeds the exact locked physical description block
-  const step0_prompt = [
-    `[SUBJECT_LOCK: ${cleanPhysicalDesc}]`,
-    `Camera: ${cameraLock}, vertical 9:16 aspect ratio, photorealistic National Geographic macro wildlife photography.`,
-    `${rawPayload.step0_environment || 'Clean natural habitat background with soft bokeh, crisp studio rim lighting.'}`,
-    `Negative constraints: ${negativeConstraint}, blurry, deformed eyes, watermark, text.`
-  ].join(' ');
+  const mouthAndCameraRule = isBeaked
+    ? 'no cartoon mouth, no teeth, natural beak only, front-facing / front three-quarter view'
+    : 'simple expressive black cartoon mouth line, no teeth';
 
-  // Extract the exact locked physical string directly from step0_prompt
-  const lockMatch = step0_prompt.match(/\[SUBJECT_LOCK:\s*(.*?)\]/);
-  const lockedPhysicalFromStep0 = lockMatch ? lockMatch[1] : cleanPhysicalDesc;
+  // Exact locked subject string reused verbatim across Step 0 and Scenes 1-4
+  const lockedSubject = `${cleanAnatomy}, ${cartoonFeatures}, ${mouthAndCameraRule}`;
+  const subjectLockTag = `[SUBJECT_LOCK: ${lockedSubject}]`;
 
-  const buildLockedScene = (sceneAction, sceneIndex) => {
-    const cleanAction = (sceneAction || '').replace(/\s+/g, ' ').trim();
-    return [
-      `[SUBJECT_LOCK: ${lockedPhysicalFromStep0}]`,
-      `Scene ${sceneIndex} (10s Google Flow, 9:16 vertical, ${cameraLock}): ${cleanAction}`,
-      `Consistent lighting, photorealistic wildlife texture with expressive 3D cartoon googly eyes.`,
-      `Negative constraints: ${negativeConstraint}, character drift, morphing anatomy.`
-    ].join(' ');
+  const cleanEnv = (
+    rawPayload.step0_environment ||
+    'natural macro wildlife habitat with soft depth-of-field bokeh and natural rim light'
+  )
+    .replace(/\s+/g, ' ')
+    .replace(/\.+$/, '')
+    .trim();
+
+  const step0_prompt = `Hyper-realistic wildlife macro nature footage, vertical 9:16 aspect ratio. ${subjectLockTag}. ${cleanEnv}. No text, no subtitles, no watermark.`;
+
+  const buildTimestampedScene = (s0_3, s3_7, s7_10, sfx, fallbackAction) => {
+    const clean = (txt) => (txt || '').replace(/\s+/g, ' ').replace(/\.+$/, '').trim();
+    const p1 = clean(s0_3) || clean(fallbackAction) || 'Close-up macro reaction with wide cartoon googly eyes';
+    const p2 = clean(s3_7) || 'Expressive thick black cartoon eyebrow movement showcasing natural animal behavior';
+    const p3 = clean(s7_10) || 'Dramatic macro hold completing the action cleanly';
+    const cleanSfx =
+      clean(sfx) || 'soft leaf rustle, subtle cartoon eye blink pop, organic macro foley';
+
+    return `Hyper-realistic wildlife macro nature footage, vertical 9:16 aspect ratio. ${subjectLockTag}. 0-3s: ${p1}. 3-7s: ${p2}. 7-10s: ${p3}. Sound effects only: ${cleanSfx}. No text, no subtitles, no watermark, no music, no speech.`;
   };
 
   return {
     ...rawPayload,
+    has_beak_or_sharp_snout: isBeaked,
     anti_drift_meta: {
-      locked_subject: lockedPhysicalFromStep0,
-      is_beak_or_sharp_snout: isBeakOrSharpSnout,
-      camera_lock: cameraLock,
-      negative_constraint: negativeConstraint
+      locked_subject: subjectLockTag,
+      is_beak_or_sharp_snout: isBeaked,
+      mouth_rule: mouthAndCameraRule
     },
     step0_prompt,
-    scene1: buildLockedScene(rawPayload.scene1_action, 1),
-    scene2: buildLockedScene(rawPayload.scene2_action, 2),
-    scene3: buildLockedScene(rawPayload.scene3_action, 3),
-    scene4: buildLockedScene(rawPayload.scene4_action, 4)
+    scene1: buildTimestampedScene(
+      rawPayload.scene1_0_3s,
+      rawPayload.scene1_3_7s,
+      rawPayload.scene1_7_10s,
+      rawPayload.scene1_sfx,
+      rawPayload.scene1_action
+    ),
+    scene2: buildTimestampedScene(
+      rawPayload.scene2_0_3s,
+      rawPayload.scene2_3_7s,
+      rawPayload.scene2_7_10s,
+      rawPayload.scene2_sfx,
+      rawPayload.scene2_action
+    ),
+    scene3: buildTimestampedScene(
+      rawPayload.scene3_0_3s,
+      rawPayload.scene3_3_7s,
+      rawPayload.scene3_7_10s,
+      rawPayload.scene3_sfx,
+      rawPayload.scene3_action
+    ),
+    scene4: buildTimestampedScene(
+      rawPayload.scene4_0_3s,
+      rawPayload.scene4_3_7s,
+      rawPayload.scene4_7_10s,
+      rawPayload.scene4_sfx,
+      rawPayload.scene4_action
+    )
   };
 }

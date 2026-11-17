@@ -9,6 +9,29 @@ export const AVAILABLE_MODELS = [
   { id: 'gemini-2.5-flash-lite', label: 'gemini-2.5-flash-lite (Free Tier)' }
 ];
 
+export const ENDING_OPTIONS = [
+  {
+    id: 'auto',
+    label: '🎲 Auto-Rotasi Cerdas (Rekomendasi)',
+    shortLabel: 'Auto-Rotasi'
+  },
+  {
+    id: 'loop',
+    label: '🔄 Natural Loop (Nyambung ke awal, tanpa "padahal...")',
+    shortLabel: 'Natural Loop'
+  },
+  {
+    id: 'dilemma',
+    label: '💬 Dilemma Comment-Bait (Pilihan absurd 3s terakhir)',
+    shortLabel: 'Dilemma Comment-Bait'
+  },
+  {
+    id: 'teaser',
+    label: '🔥 Curiosity-Gap Teaser (Bocoran fakta hewan besok)',
+    shortLabel: 'Curiosity-Gap Teaser'
+  }
+];
+
 export const FALLBACK_MODELS = [
   'gemini-3.8-flash',
   'gemini-3-flash-preview',
@@ -26,17 +49,29 @@ const EPISODE_SCHEMA = {
   type: 'OBJECT',
   properties: {
     animal_name: { type: 'STRING' },
-    has_beak_or_sharp_snout: { type: 'BOOLEAN' },
+    is_beaked_animal: { type: 'BOOLEAN' },
     verified_facts: {
       type: 'ARRAY',
       items: { type: 'STRING' }
     },
     step0_physical_desc: { type: 'STRING' },
     step0_environment: { type: 'STRING' },
-    scene1_action: { type: 'STRING' },
-    scene2_action: { type: 'STRING' },
-    scene3_action: { type: 'STRING' },
-    scene4_action: { type: 'STRING' },
+    scene1_0_3s: { type: 'STRING' },
+    scene1_3_7s: { type: 'STRING' },
+    scene1_7_10s: { type: 'STRING' },
+    scene1_sfx: { type: 'STRING' },
+    scene2_0_3s: { type: 'STRING' },
+    scene2_3_7s: { type: 'STRING' },
+    scene2_7_10s: { type: 'STRING' },
+    scene2_sfx: { type: 'STRING' },
+    scene3_0_3s: { type: 'STRING' },
+    scene3_3_7s: { type: 'STRING' },
+    scene3_7_10s: { type: 'STRING' },
+    scene3_sfx: { type: 'STRING' },
+    scene4_0_3s: { type: 'STRING' },
+    scene4_3_7s: { type: 'STRING' },
+    scene4_7_10s: { type: 'STRING' },
+    scene4_sfx: { type: 'STRING' },
     vo_script: { type: 'STRING' },
     title: { type: 'STRING' },
     description_ai_label: { type: 'STRING' },
@@ -85,14 +120,26 @@ const EPISODE_SCHEMA = {
   },
   required: [
     'animal_name',
-    'has_beak_or_sharp_snout',
+    'is_beaked_animal',
     'verified_facts',
     'step0_physical_desc',
     'step0_environment',
-    'scene1_action',
-    'scene2_action',
-    'scene3_action',
-    'scene4_action',
+    'scene1_0_3s',
+    'scene1_3_7s',
+    'scene1_7_10s',
+    'scene1_sfx',
+    'scene2_0_3s',
+    'scene2_3_7s',
+    'scene2_7_10s',
+    'scene2_sfx',
+    'scene3_0_3s',
+    'scene3_3_7s',
+    'scene3_7_10s',
+    'scene3_sfx',
+    'scene4_0_3s',
+    'scene4_3_7s',
+    'scene4_7_10s',
+    'scene4_sfx',
     'vo_script',
     'title',
     'description_ai_label',
@@ -107,24 +154,41 @@ function normalizeEpisodeJson(rawObj, fallbackAnimal) {
     pinned_comment: String(platformObj?.pinned_comment || '')
   });
 
+  const cleanTags = Array.isArray(rawObj?.seo_tags)
+    ? rawObj.seo_tags
+        .map((t) => String(t).replace(/^#+/, '').trim().toLowerCase())
+        .filter(Boolean)
+        .slice(0, 6)
+    : [];
+
   return {
     animal_name: String(rawObj?.animal_name || fallbackAnimal),
-    has_beak_or_sharp_snout: Boolean(rawObj?.has_beak_or_sharp_snout),
+    is_beaked_animal: Boolean(rawObj?.is_beaked_animal),
     verified_facts: Array.isArray(rawObj?.verified_facts)
       ? rawObj.verified_facts.map(String)
       : [],
     step0_physical_desc: String(rawObj?.step0_physical_desc || ''),
     step0_environment: String(rawObj?.step0_environment || ''),
-    scene1_action: String(rawObj?.scene1_action || ''),
-    scene2_action: String(rawObj?.scene2_action || ''),
-    scene3_action: String(rawObj?.scene3_action || ''),
-    scene4_action: String(rawObj?.scene4_action || ''),
+    scene1_0_3s: String(rawObj?.scene1_0_3s || ''),
+    scene1_3_7s: String(rawObj?.scene1_3_7s || ''),
+    scene1_7_10s: String(rawObj?.scene1_7_10s || ''),
+    scene1_sfx: String(rawObj?.scene1_sfx || ''),
+    scene2_0_3s: String(rawObj?.scene2_0_3s || ''),
+    scene2_3_7s: String(rawObj?.scene2_3_7s || ''),
+    scene2_7_10s: String(rawObj?.scene2_7_10s || ''),
+    scene2_sfx: String(rawObj?.scene2_sfx || ''),
+    scene3_0_3s: String(rawObj?.scene3_0_3s || ''),
+    scene3_3_7s: String(rawObj?.scene3_3_7s || ''),
+    scene3_7_10s: String(rawObj?.scene3_7_10s || ''),
+    scene3_sfx: String(rawObj?.scene3_sfx || ''),
+    scene4_0_3s: String(rawObj?.scene4_0_3s || ''),
+    scene4_3_7s: String(rawObj?.scene4_3_7s || ''),
+    scene4_7_10s: String(rawObj?.scene4_7_10s || ''),
+    scene4_sfx: String(rawObj?.scene4_sfx || ''),
     vo_script: String(rawObj?.vo_script || ''),
     title: String(rawObj?.title || ''),
     description_ai_label: String(rawObj?.description_ai_label || ''),
-    seo_tags: Array.isArray(rawObj?.seo_tags)
-      ? rawObj.seo_tags.map(String).slice(0, 6)
-      : [],
+    seo_tags: cleanTags,
     social_captions: {
       yt_shorts: safeSocial(rawObj?.social_captions?.yt_shorts),
       tiktok: safeSocial(rawObj?.social_captions?.tiktok),
@@ -134,22 +198,67 @@ function normalizeEpisodeJson(rawObj, fallbackAnimal) {
   };
 }
 
+function resolveEndingInstruction(endingType, cleanAnimal) {
+  const pool = ['loop', 'dilemma', 'teaser'];
+  const effectiveStyle =
+    endingType === 'auto' || !pool.includes(endingType)
+      ? pool[Math.floor(Math.random() * pool.length)]
+      : endingType;
+
+  if (effectiveStyle === 'loop') {
+    return {
+      effectiveStyle,
+      directive: `GAYA ENDING WAJIB — NATURAL LOOP:
+   - Kalimat terakhir naskah WAJIB berbentuk pernyataan utuh yang mengalir mulus dan nyambung secara logis/ritmis kembali ke kalimat pembuka ("Kalau lo terlahir jadi ${cleanAnimal}...") saat video berulang otomatis.
+   - DILARANG KERAS memakai kata menggantung palsu seperti "padahal...", "karena...", "soalnya...", atau ajakan "Subscribe".`
+    };
+  }
+
+  if (effectiveStyle === 'dilemma') {
+    return {
+      effectiveStyle,
+      directive: `GAYA ENDING WAJIB — DILEMMA COMMENT-BAIT:
+   - Di 3 detik terakhir (kalimat penutup), lempar pertanyaan pilihan absurd/dilema ekstrem yang berkaitan langsung dengan nasib ${cleanAnimal} untuk memancing penonton berdebat di kolom komentar (contoh pola: "Mending punya [kekuatan gila] tapi [ironi apes], atau hidup normal aja? Tulis pilihan lo!").
+   - DILARANG memakai kata menggantung palsu seperti "padahal..." atau ajakan "Subscribe".`
+    };
+  }
+
+  return {
+    effectiveStyle: 'teaser',
+    directive: `GAYA ENDING WAJIB — CURIOSITY-GAP TEASER:
+   - Di 3 detik terakhir (kalimat penutup), berikan bocoran singkat 1 kalimat tentang fakta gila hewan lain untuk episode besok guna memancing rasa penasaran penonton agar pantengin channel (contoh pola: "Besok kita bahas hewan yang [fakta ekstrem bikin penasaran]—jangan sampai kelewatan!").
+   - DILARANG KERAS mengemis kata "Subscribe", "Like", atau "Follow", dan DILARANG memakai kata "padahal...".`
+  };
+}
+
 async function callDeepSeekEpisodeEndpoint(deepseekKey, prompt) {
-  const systemPrompt = `You are a strict JSON generator for a vertical wildlife educational channel ("Siapa Tahu").
-You MUST respond ONLY with a valid JSON object matching this exact schema:
+  const systemPrompt = `You are the Creative Director for YouTube Shorts channel "Siapa Tahu".
+Respond ONLY with a valid JSON object matching this exact schema:
 {
   "animal_name": "string",
-  "has_beak_or_sharp_snout": true,
+  "is_beaked_animal": false,
   "verified_facts": ["fact 1", "fact 2", "fact 3"],
-  "step0_physical_desc": "string (English, 35-55 words)",
-  "step0_environment": "string (English, 15-25 words)",
-  "scene1_action": "string (English, 20-35 words)",
-  "scene2_action": "string (English, 20-35 words)",
-  "scene3_action": "string (English, 20-35 words)",
-  "scene4_action": "string (English, 20-35 words)",
-  "vo_script": "string (Indonesian, strictly 90-98 words, seamless loop, NO Subscribe/Like/Follow)",
-  "title": "string (Indonesian, max 58 chars)",
-  "description_ai_label": "string (Indonesian SEO + AI synthetic content disclosure)",
+  "step0_physical_desc": "string (English physical anatomy only: skin/fur/scale texture, color, proportions)",
+  "step0_environment": "string (English natural macro habitat)",
+  "scene1_0_3s": "string (English visual action 0-3s)",
+  "scene1_3_7s": "string (English visual action 3-7s)",
+  "scene1_7_10s": "string (English visual action 7-10s)",
+  "scene1_sfx": "string (3 specific realistic SFX in English, comma-separated)",
+  "scene2_0_3s": "string",
+  "scene2_3_7s": "string",
+  "scene2_7_10s": "string",
+  "scene2_sfx": "string (3 specific realistic SFX in English, comma-separated)",
+  "scene3_0_3s": "string",
+  "scene3_3_7s": "string",
+  "scene3_7_10s": "string",
+  "scene3_sfx": "string (3 specific realistic SFX in English, comma-separated)",
+  "scene4_0_3s": "string",
+  "scene4_3_7s": "string",
+  "scene4_7_10s": "string",
+  "scene4_sfx": "string (3 specific realistic SFX in English, comma-separated)",
+  "vo_script": "string (Indonesian, 85-98 words, POV 'Lo', starts with 'Kalau lo terlahir jadi [Hewan], ...', NO 'Aku/Saya', NO 'padahal...', NO 'Subscribe')",
+  "title": "POV: Lo Jadi [Hewan]—[Hook 3-4 Kata]! [Emoji]",
+  "description_ai_label": "string (Indonesian SEO description + AI synthetic content disclosure)",
   "seo_tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6"],
   "social_captions": {
     "yt_shorts": { "caption": "string", "pinned_comment": "string" },
@@ -171,7 +280,7 @@ You MUST respond ONLY with a valid JSON object matching this exact schema:
         { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt }
       ],
-      temperature: 0.7,
+      temperature: 0.75,
       response_format: { type: 'json_object' }
     })
   });
@@ -193,7 +302,7 @@ async function callGeminiEpisodeEndpoint(apiKey, model, prompt, useSearch) {
   const payload = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
-      temperature: 0.7,
+      temperature: 0.75,
       responseMimeType: 'application/json',
       responseSchema: EPISODE_SCHEMA
     }
@@ -220,7 +329,11 @@ async function callGeminiEpisodeEndpoint(apiKey, model, prompt, useSearch) {
   return data;
 }
 
-export async function generateEpisodeFactory(keysOrGeminiKey, animalName) {
+export async function generateEpisodeFactory(
+  keysOrGeminiKey,
+  animalName,
+  endingType = 'auto'
+) {
   const geminiKey =
     typeof keysOrGeminiKey === 'string'
       ? keysOrGeminiKey
@@ -240,30 +353,45 @@ export async function generateEpisodeFactory(keysOrGeminiKey, animalName) {
   if (!cleanAnimal) throw new Error('Masukkan nama hewan terlebih dahulu.');
 
   const calibratedHook = await getHookCalibration();
-  const hookInstruction = calibratedHook?.directive
-    ? `KALIBRASI HOOK AKTIF DARI ANALYTICS DOCTOR: "${calibratedHook.directive}". Terapkan aturan ini secara ketat pada 3 detik pertama vo_script dan visual scene1_action.`
-    : `HOOK STANDAR RETENTION TINGGI: Buka detik 00:00 dengan kontras visual mengejutkan atau POV langsung dari sudut pandang hewan tanpa basa-basi.`;
+  const hookCalibrationNote = calibratedHook?.directive
+    ? `\n   - KALIBRASI TAMBAHAN DARI ANALYTICS DOCTOR: "${calibratedHook.directive}".`
+    : '';
 
-  const prompt = `Kamu adalah Creative Director untuk channel edukasi hewan vertikal "Siapa Tahu" (gaya visual: hewan fotorealistis makro dengan mata kartun 3D googly eyes yang ekspresif, narasi POV/edukasi witty Bahasa Indonesia).
+  const { effectiveStyle, directive: endingDirective } = resolveEndingInstruction(
+    endingType,
+    cleanAnimal
+  );
 
-TUGAS UTAMA:
-Verifikasi fakta anatomi dan perilaku nyata yang akurat dari hewan: "${cleanAnimal}".
+  const prompt = `Kamu adalah Creative Director untuk channel YouTube Shorts "Siapa Tahu". Buatkan paket produksi lengkap untuk hewan: ${cleanAnimal}.
 
-ATURAN KETAT OUTPUT JSON:
-1. has_beak_or_sharp_snout: Set true jika hewan memiliki paruh, moncong panjang/tajam, atau struktur mulut memanjang (misal burung, platipus, bunglon, buaya, trenggiling, kura-kura, hiu).
-2. verified_facts: 3 fakta biologi/anatomi unik & akurat tentang "${cleanAnimal}" dalam Bahasa Indonesia.
-3. step0_physical_desc (Bahasa Inggris, 35-55 kata): Deskripsi fisik ultra-konsisten dari "${cleanAnimal}" (warna, tekstur kulit/bulu/sisik akurat hasil riset, proporsi tubuh, dan sepasang mata kartun 3D googly eyes besar dengan pupil hitam ekspresif menempel alami di kepalanya). Jangan masukkan aksi atau latar tempat di field ini.
-4. step0_environment (Bahasa Inggris, 15-25 kata): Latar habitat alami makro untuk Master Reference Image.
-5. scene1_action sampai scene4_action (Bahasa Inggris, masing-masing 20-35 kata): Aksi spesifik dan gerakan kamera untuk klip Google Flow 10 detik (total 40 detik). Hanya tulis aksi, ekspresi mata kartun, dan gerakan kamera—jangan ulangi deskripsi fisik dasar karena akan disuntikkan otomatis oleh sistem.
-6. vo_script (Bahasa Indonesia):
-   - WAJIB berjumlah tepat antara 90 sampai 98 kata (hitung dengan cermat!).
-   - ${hookInstruction}
-   - DILARANG KERAS menulis kata "Subscribe", "Like", "Follow", atau ajakan tombol di akhir naskah.
-   - WAJIB SEAMLESS LOOP: Kalimat terakhir naskah harus menggantung/menyambung secara gramatikal dan logis langsung ke kata pertama di awal naskah saat video diputar ulang!
-7. title: Judul YouTube Shorts klik-bait edukatif maksimal 58 karakter.
-8. description_ai_label: Deskripsi singkat SEO + wajib sertakan keterangan transparansi konten AI ("Dibuat dengan bantuan AI / Altered or synthetic content").
-9. seo_tags: Tepat 6 tag SEO relevan tanpa tanda #.
-10. social_captions: Caption dan Pinned Comment pemancing diskusi untuk yt_shorts, tiktok, ig_reels, dan fb_reels.`;
+ATURAN MUTLAK YANG WAJIB DIPATUHI:
+1. GAYA BAHASA & POV:
+   - WAJIB menggunakan sudut pandang orang kedua ("Lo") dengan bahasa Indonesia gaul-cerdas, punchy, dan to-the-point (seperti teman ngobrol cerdas).
+   - DILARANG KERAS menggunakan kata "Aku", "Saya", "Kita" yang kaku, atau bahasa baku dokumenter.
+2. HOOK 0-2.5 DETIK:
+   - Kalimat pertama vo_script WAJIB langsung menghantam dengan ironi atau fakta ekstrem mengikuti pola persis:
+     "Kalau lo terlahir jadi ${cleanAnimal}, [kekuatan/fakta gila]. Tapi ada satu [cacat fatal/ironi konyol]."
+3. DURASI & ENDING NASKAH VO (85-98 KATA):
+   - Total panjang vo_script WAJIB antara 85 sampai 98 kata (±33-36 detik). Hitung jumlah katanya dengan presisi!
+   - ${endingDirective}${hookCalibrationNote}
+4. ATURAN VISUAL & ANATOMI (Bahasa Inggris):
+   - is_beaked_animal: Cek secara akurat apakah ${cleanAnimal} punya paruh/moncong keras seperti burung, penyu/kura-kura, atau platipus (set true). Jika reptil (bunglon/buaya/ular/tokek), mamalia, ikan, amfibi, atau serangga, wajib set false.
+   - step0_physical_desc (Bahasa Inggris, 25-40 kata): Deskripsi anatomi fisik nyata ${cleanAnimal} (warna, tekstur kulit/bulu/sisik, bentuk tubuh). JANGAN masukkan mata kartun, mulut, aksi, atau latar tempat karena sistem akan menyuntikkan [SUBJECT_LOCK] otomatis.
+   - step0_environment (Bahasa Inggris, 12-20 kata): Latar habitat makro alami dengan depth-of-field tajam.
+   - Untuk setiap Scene 1 sampai Scene 4 (klip 10 detik):
+     * sceneX_0_3s: Aksi visual & ekspresi mata/alis kartun di detik 0-3s (Bahasa Inggris).
+     * sceneX_3_7s: Aksi utama & gerakan kamera makro di detik 3-7s (Bahasa Inggris).
+     * sceneX_7_10s: Klimaks reaksi di detik 7-10s (Bahasa Inggris).
+     * sceneX_sfx: Daftar tepat 3 efek suara SFX spesifik sesuai adegan dalam Bahasa Inggris, dipisahkan koma (tanpa musik/ucapan).
+5. FORMAT METADATA SIAP UPLOAD:
+   - title: WAJIB pola "POV: Lo Jadi ${cleanAnimal}—[Hook Singkat 3-4 Kata]! [Emoji]" (maksimal 55 karakter).
+   - description_ai_label: Deskripsi singkat SEO Bahasa Indonesia + keterangan wajib konten AI ("Dibuat dengan bantuan AI / Altered or synthetic content").
+   - seo_tags: Tepat 6 Tag SEO relevan dalam huruf kecil TANPA tanda pagar (#), contoh: ["${cleanAnimal.toLowerCase()}", "fakta ${cleanAnimal.toLowerCase()}", "fakta unik hewan", "edukasi hewan", "pov hewan", "siapa tahu"].
+   - social_captions: Siapkan Caption dan Pinned Comment yang BERBEDA gaya serta natural untuk masing-masing platform:
+     * yt_shorts (pancing diskusi singkat & pertanyaan klik komentar)
+     * tiktok (gaya FYP santai, relasi kehidupan sehari-hari, hashtag relevan)
+     * ig_reels (hook visual estetik + ajakan share ke teman)
+     * fb_reels (gaya bercerita ringan untuk audiens luas Facebook)`;
 
   let parsed = null;
   let sources = [];
@@ -271,7 +399,6 @@ ATURAN KETAT OUTPUT JSON:
   let usedSearch = false;
   let deepseekError = null;
 
-  // 1. Try DeepSeek first if provider is 'auto' or 'deepseek' and key is present
   const shouldTryDeepSeek =
     (provider === 'auto' || provider === 'deepseek') && Boolean(deepseekKey);
 
@@ -286,13 +413,11 @@ ATURAN KETAT OUTPUT JSON:
       if (provider === 'deepseek') {
         throw new Error(`DeepSeek Error: ${err.message}`);
       }
-      // If provider === 'auto', fall through to Gemini if geminiKey exists
     }
   } else if (provider === 'deepseek' && !deepseekKey) {
     throw new Error('Mode DeepSeek dipilih, tetapi DeepSeek API Key belum diisi.');
   }
 
-  // 2. Fallback or primary Gemini execution
   if (!parsed) {
     if (!geminiKey) {
       throw new Error(
@@ -358,6 +483,8 @@ ATURAN KETAT OUTPUT JSON:
   const lockedResult = applyAntiDriftLock(parsed, cleanAnimal);
   return {
     ...lockedResult,
+    ending_type_selected: endingType,
+    ending_style_applied: effectiveStyle,
     grounding_sources: sources,
     calibrated_hook_used: calibratedHook?.directive || null,
     model_used: usedModel,

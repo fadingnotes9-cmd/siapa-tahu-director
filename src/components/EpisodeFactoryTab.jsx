@@ -8,7 +8,7 @@ import {
   FolderPlus,
   CheckCircle2
 } from 'lucide-react';
-import { generateEpisodeFactory } from '../utils/gemini.js';
+import { generateEpisodeFactory, ENDING_OPTIONS } from '../utils/gemini.js';
 import { getHookCalibration, saveEpisodeToFolder } from '../utils/db.js';
 import { writeEpisodeToKontenFolder } from '../utils/exportEpisode.js';
 import EpisodeDetailView from './EpisodeDetailView.jsx';
@@ -22,6 +22,9 @@ export default function EpisodeFactoryTab({
   onEpisodeSaved
 }) {
   const [animal, setAnimal] = useState(() => localStorage.getItem('last_factory_animal') || '');
+  const [endingType, setEndingType] = useState(
+    () => localStorage.getItem('last_factory_ending_type') || 'auto'
+  );
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveNotice, setSaveNotice] = useState('');
@@ -43,6 +46,12 @@ export default function EpisodeFactoryTab({
     }
   }, [isActive]);
 
+  const handleEndingChange = (e) => {
+    const val = e.target.value;
+    setEndingType(val);
+    localStorage.setItem('last_factory_ending_type', val);
+  };
+
   const handleGenerate = async (e) => {
     e.preventDefault();
     if (!apiKey && !deepseekKey) {
@@ -59,10 +68,12 @@ export default function EpisodeFactoryTab({
     try {
       const data = await generateEpisodeFactory(
         { geminiKey: apiKey, deepseekKey, provider: factoryProvider },
-        animal
+        animal,
+        endingType
       );
       setResult(data);
       localStorage.setItem('last_factory_animal', animal.trim());
+      localStorage.setItem('last_factory_ending_type', endingType);
       localStorage.setItem('last_factory_result', JSON.stringify(data));
     } catch (err) {
       setError(err.message || 'Gagal menghasilkan paket episode.');
@@ -105,8 +116,8 @@ export default function EpisodeFactoryTab({
 
   const engineBadge =
     factoryProvider === 'deepseek' || (factoryProvider === 'auto' && deepseekKey)
-      ? 'DeepSeek-Chat + JSON'
-      : 'Gemini + JSON';
+      ? 'DeepSeek-Chat • V1.1'
+      : 'Gemini • V1.1';
 
   return (
     <div className="space-y-4">
@@ -122,7 +133,7 @@ export default function EpisodeFactoryTab({
         </div>
       )}
 
-      {/* 1-Word Input Card */}
+      {/* 1-Word Input + Gaya Ending Form Card */}
       <form
         onSubmit={handleGenerate}
         className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3"
@@ -165,6 +176,29 @@ export default function EpisodeFactoryTab({
             )}
             {loading ? 'Riset...' : 'Generate'}
           </button>
+        </div>
+
+        {/* Dropdown Gaya Ending */}
+        <div className="space-y-1">
+          <label
+            htmlFor="endingTypeSelect"
+            className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider"
+          >
+            Gaya Ending
+          </label>
+          <select
+            id="endingTypeSelect"
+            value={endingType}
+            onChange={handleEndingChange}
+            disabled={loading}
+            className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+          >
+            {ENDING_OPTIONS.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {error && (

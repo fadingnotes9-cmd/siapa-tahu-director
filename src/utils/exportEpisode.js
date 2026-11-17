@@ -2,15 +2,19 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
 export function formatEpisodeAsText(ep) {
-  const tags = (ep.seo_tags || []).map((t) => `#${t.replace(/^#/, '')}`).join(' ');
+  const commaTags = (ep.seo_tags || [])
+    .map((t) => String(t).replace(/^#+/, '').trim())
+    .filter(Boolean)
+    .join(', ');
   const facts = (ep.verified_facts || []).map((f, i) => `${i + 1}. ${f}`).join('\n');
 
   return [
     `====================================================`,
-    `SIAPA TAHU DIRECTOR — PAKET PRODUKSI EPISODE`,
-    `Hewan : ${ep.animal_name || '-'}`,
-    `Judul : ${ep.title || '-'}`,
-    `Waktu : ${new Date(ep.savedAt || Date.now()).toLocaleString('id-ID')}`,
+    `SIAPA TAHU DIRECTOR V1.1 — PAKET PRODUKSI EPISODE`,
+    `Hewan  : ${ep.animal_name || '-'}`,
+    `Judul  : ${ep.title || '-'}`,
+    `Ending : ${ep.ending_style_applied || 'loop'}`,
+    `Waktu  : ${new Date(ep.savedAt || Date.now()).toLocaleString('id-ID')}`,
     `====================================================`,
     ``,
     `[FAKTA ANATOMI TERVERIFIKASI]`,
@@ -28,17 +32,17 @@ export function formatEpisodeAsText(ep) {
     `[SCENE 3 • 00:20 - 00:30 (TWIST)]`,
     ep.scene3 || '-',
     ``,
-    `[SCENE 4 • 00:30 - 00:40 (LOOP)]`,
+    `[SCENE 4 • 00:30 - 00:40 (ENDING)]`,
     ep.scene4 || '-',
     ``,
-    `[NASKAH VO SEAMLESS LOOP]`,
+    `[NASKAH VO]`,
     ep.vo_script || '-',
     ``,
     `[DESKRIPSI + LABEL AI]`,
     ep.description_ai_label || '-',
     ``,
     `[6 TAG SEO]`,
-    tags || '-',
+    commaTags || '-',
     ``,
     `[YT SHORTS]`,
     `Caption: ${ep.social_captions?.yt_shorts?.caption || '-'}`,

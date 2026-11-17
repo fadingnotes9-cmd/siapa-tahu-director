@@ -45,6 +45,12 @@ export function CopyButton({ text, label = 'Copy', compact = false }) {
   );
 }
 
+const ENDING_BADGE_MAP = {
+  loop: '🔄 Natural Loop',
+  dilemma: '💬 Dilemma Comment-Bait',
+  teaser: '🔥 Curiosity-Gap Teaser'
+};
+
 export default function EpisodeDetailView({ result }) {
   const [activePlatform, setActivePlatform] = useState('yt_shorts');
 
@@ -53,6 +59,14 @@ export default function EpisodeDetailView({ result }) {
   const wordCount = result?.vo_script
     ? result.vo_script.trim().split(/\s+/).filter(Boolean).length
     : 0;
+
+  const commaSeparatedTags = (result.seo_tags || [])
+    .map((t) => String(t).replace(/^#+/, '').trim())
+    .filter(Boolean)
+    .join(', ');
+
+  const endingLabel =
+    ENDING_BADGE_MAP[result.ending_style_applied] || '🔄 Natural Loop';
 
   const platforms = [
     { id: 'yt_shorts', name: 'YT Shorts' },
@@ -68,18 +82,18 @@ export default function EpisodeDetailView({ result }) {
         <div className="flex items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400">
             <ShieldCheck className="w-4 h-4 shrink-0" />
-            Anti-Drift Physical Lock
+            Anti-Drift Anatomy Lock
           </span>
           <span
             className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
               result.anti_drift_meta?.is_beak_or_sharp_snout
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                : 'bg-slate-800 text-slate-300'
+                : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
             }`}
           >
             {result.anti_drift_meta?.is_beak_or_sharp_snout
-              ? 'BEAK + FRONT-FACING'
-              : 'STANDARD MACRO'}
+              ? 'BEAKED • FRONT-FACING'
+              : 'NON-BEAKED • CARTOON MOUTH'}
           </span>
         </div>
         {result.model_used && (
@@ -138,7 +152,7 @@ export default function EpisodeDetailView({ result }) {
           { num: 1, text: result.scene1, tag: '00:00 - 00:10 (Hook)' },
           { num: 2, text: result.scene2, tag: '00:10 - 00:20 (Build)' },
           { num: 3, text: result.scene3, tag: '00:20 - 00:30 (Twist)' },
-          { num: 4, text: result.scene4, tag: '00:30 - 00:40 (Loop)' }
+          { num: 4, text: result.scene4, tag: '00:30 - 00:40 (Ending)' }
         ].map((sc) => (
           <div
             key={sc.num}
@@ -160,21 +174,25 @@ export default function EpisodeDetailView({ result }) {
         ))}
       </div>
 
-      {/* Naskah VO Seamless Loop */}
+      {/* Naskah VO */}
       <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-              Naskah VO Seamless Loop
+              Naskah VO
             </h3>
             <span
               className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                wordCount >= 88 && wordCount <= 102
+                wordCount >= 85 && wordCount <= 98
                   ? 'bg-emerald-500/20 text-emerald-300'
                   : 'bg-amber-500/20 text-amber-300'
               }`}
             >
               {wordCount} kata
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-200 border border-slate-700 font-medium">
+              {endingLabel}
+              {result.ending_type_selected === 'auto' ? ' (Auto)' : ''}
             </span>
           </div>
           <CopyButton text={result.vo_script} label="Copy VO" />
@@ -188,7 +206,9 @@ export default function EpisodeDetailView({ result }) {
       <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">Judul</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase">
+              Judul YouTube ({(result.title || '').length}/55)
+            </span>
             <CopyButton text={result.title} label="Copy Judul" compact />
           </div>
           <p className="text-xs font-semibold text-white bg-slate-950 p-2.5 rounded-xl border border-slate-800">
@@ -211,24 +231,13 @@ export default function EpisodeDetailView({ result }) {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-400 uppercase inline-flex items-center gap-1">
-              <Hash className="w-3 h-3 text-emerald-400" /> 6 Tag SEO
+              <Hash className="w-3 h-3 text-emerald-400" /> 6 Tag SEO (Siap Paste YT Studio)
             </span>
-            <CopyButton
-              text={(result.seo_tags || []).join(', ')}
-              label="Copy Tags"
-              compact
-            />
+            <CopyButton text={commaSeparatedTags} label="Copy Tags" compact />
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {(result.seo_tags || []).map((tag, i) => (
-              <span
-                key={i}
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-emerald-300"
-              >
-                #{tag.replace(/^#/, '')}
-              </span>
-            ))}
-          </div>
+          <p className="text-xs text-emerald-300 bg-slate-950 p-2.5 rounded-xl border border-slate-800 font-mono">
+            {commaSeparatedTags}
+          </p>
         </div>
       </div>
 
